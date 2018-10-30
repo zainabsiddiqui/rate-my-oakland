@@ -96,7 +96,8 @@ function runScript() {
 function isValidName(name) {
     return (currentProfessorName !== "Staff" &&
         currentProfessorName !== "undefined" &&
-        currentProfessorName !== "TBA .");
+        currentProfessorName !== "TBA" &&
+        currentProfessorName !== "TBD");
 }
 
 // This function grabs professor names from the class search webpage HTML
@@ -154,6 +155,86 @@ function grabProfessorSearchPageCallback(response) {
     }
 }
 
+// Only if we have found a result for the professor do we do anything
+function foundResult(text) {
+    return (text.indexOf("Your search didn't return any results.") == -1);
+}
+
+function getProfessorRating(professorIndex, SearchPageURL) {
+
+    var message = {
+        method: "POST",
+        action: "xhttp",
+        url: searchPageURL,
+        data: "",
+        link: SearchPageURL,
+        index: professorIndex
+
+    };
+
+    chrome.runtime.sendMessage(message, getProfessorRatingCallback);
+}
+
+function getProfessorRatingCallback(response) {
+
+    var responseText = response.response;
+    var htmlDoc = getDOMFromString(responseText);
+
+    if (!isNaN(htmlDoc.getElementsByClassName("grade")[0].innerHTML)) {
+        professorRating = htmlDoc.getElementsByClassName("grade")[0].innerHTML;
+    }
+
+    var professorID = document.getElementById("ptifrmtgtframe").contentWindow.document.getElementById(professorMethodID + response.professorIndex);
+
+    addRatingToPage(professorID, professorRating, response.searchPageURL);
+}
+
+function getDOMFromString(textHTML) {
+
+    var tempDiv = document.createElement("div");
+    tempDiv.innerHTML = textHTML.replace(/<script(.|\s)*?\/script>/g, "");
+
+    return tempDiv;
+}
+
+function addRatingToPage(professorID, ProfessorRating, SearchPageURL) {
+
+    var span = document.createElement("span"); // Created to separate professor name and score in the HTML
+    var link = document.createElement("a");
+    var space = document.createTextNode(" "); // Create a space between professor name and rating
+    var professorRatingTextNode = document.createTextNode(ProfessorRating); // The text with the professor rating
+
+    if (ProfessorRating < 3.5) {
+        link.style.color = "#8A0808"; // red = bad
+    } else if (ProfessorRating >= 3.5 && ProfessorRating < 4) {
+        link.style.color = "#FFBF00"; // yellow/orange = okay
+    } else if (ProfessorRating >= 4 && ProfessorRating <= 5) {
+        link.style.color = "#298A08"; // green = good
+    }
+
+    span.style.fontWeight = "bold"; // bold it
+
+    link.href = SearchPageURL; // make the link
+    link.target = "_blank"; // open a new tab when clicked
+
+    // append everything together
+    link.appendChild(professorRatingTextNode);
+    span.appendChild(space);
+    span.appendChild(link);
+    professorID.appendChild(span);
+}
+
+function getLastName(fullName) {
+    var comp = fullName.split(" ");
+
+    if (comp.length == 1) {
+        return comp[0]; //Case for Doe
+    } else if (comp.length == 2) {
+        return comp[1]; //case for John Doe
+    } else if (comp.length == 3) {
+        return comp[2]; //case for John M. Doe
+    }
+}
 
 
 
