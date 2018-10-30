@@ -7,7 +7,7 @@
     {
       "matches": ["https://*.oakland.edu/*"],
 
-      "js": ["script.js", "jquery-3.3.1.min.js"]
+      "js": ["main.js", "jquery-3.3.1.min.js"]
     }
   ],
 
