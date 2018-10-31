@@ -26,7 +26,7 @@ document.addEventListener("DOMSubtreeModified",
 		if(timeout) {
 			clearTimeout(timeout);
 		}
-		timeout = setTimeOut(listener, 1000);
+		timeout = setTimeout(listener, 1000);
 	}, false); 
 
 
