@@ -8,7 +8,7 @@
 *
 **/
 
-var currentProfessorName = ""; // This is the name of the professor currently being searched for
+var professorName = ""; // This is the name of the professor currently being searched for
 var rmpSearchURL = ""; // This is the URL being used to search for a certain professor
 var professorRating = ""; // This is the numeric rating for a certain professor
 
@@ -16,7 +16,7 @@ var professors = {}; // This houses the professors searched for already
 
 var triesCount;
 
-var professorMethodClass = "email"; // This is the class attribute used in OU's registration system to designate professor names
+var professorMethodClass = "instructor-col"; // This is the class attribute used in OU's registration system to designate professor names
 
 
 // This fires the listener function below if any change is detected on the page
@@ -40,7 +40,7 @@ function listener() {
 
 // This function resets our global variables
 function resetValues() {
-    currentProfessorName = "";
+    professorName = "";
     ratingsPageURL = "";
     rmpSearchURL = "";
     professorRating = "";
@@ -50,9 +50,11 @@ function resetValues() {
 // This returns true if the user is on the OU class search page
 function detectClassSearchPage() {
     try {
-        var classSearchMethod = document.window.frameElement.contentWindow.document.getElementById(professorMethodClass + 0).innerHTML;
+    	// This finds the HTML tag that houses instructor listings on the class search page
+        var classSearchMethod = document.querySelector('.instructor-col');
 
-        if (classSearchMethod !== undefined) {
+        if (classSearchMethod != undefined) {
+        	console.log("OMG YAY!");
             return true; // Class search page has been detected
         }
     } catch (classSearchErr) {
@@ -72,68 +74,91 @@ function runScript() {
     var schoolName = encodeURI("oakland university");
 
     var professorIndex = 0;
-    var professorsOnPage;
+    var numberOfProfessors = document.querySelector('.KeyTable').getAttribute('summary').match(/\d+/).pop();
+    var all = "";
 
-    while (currentProfessorName !== "undefined") {
 
-        professorsOnPage = grabProfessorNames(professorIndex);
+    // while(professorIndex < numberOfProfessors) {
+    // 	currentProfessorNames = grabProfessorNames(professorIndex);
+    // 	console.log(currentProfessorNames);
+    // 	professorIndex++;
+    // }
 
-        if (isValidName(currentProfessorName)) {
-        	// Professor name found is valid and can be searched for
+     while (professorName !== undefined) {
+
+        currentProfessorNames = grabProfessorNames(professorIndex);
+
+        if(currentProfessorNames == undefined) {
+        	break;
+        }
+
+        console.log(currentProfessorNames);
+
+        if (isValidName(professorName)) {
             triesCount = 0;
-            grabProfessorSearchPage(professorIndex, professorsOnPage, schoolName);
+            grabProfessorSearchPage(professorIndex, currentProfessorNames, schoolName);
         } else {
-            // No valid professor name = no rating
-            professors.currentProfessorName = {};
-            professors.currentProfessorName.professorRating = "N/A";
+            //TODO: Future Implementation.
+            professors.professorName = {};
+            professors.professorName.professorRating = "N/A";
         }
 
         professorIndex++;
     }
-}
+
+   }
 
 // This function returns true if there is a professor listed/if the professor listed is undefined or not yet announced
 function isValidName(name) {
-    return (currentProfessorName !== "Staff" &&
-        currentProfessorName !== "undefined" &&
-        currentProfessorName !== "TBA" &&
-        currentProfessorName !== "TBD");
+    return (professorName !== "Staff" &&
+        professorName !== "undefined" &&
+        professorName !== "TBA" &&
+        professorName !== "TBD");
 }
 
 // This function grabs professor names from the class search webpage HTML
 function grabProfessorNames(professorIndex) {
     try {
-        names = document.window.frameElement.contentWindow.document.getElementById(professorMethodClass + professorIndex).innerHTML;
 
-        names = names.split(",");
+        var namesExtracted = document.querySelectorAll('.email');
+
+        var names = [];
+
+        for(var i = 0; i < namesExtracted.length; i++) {
+        	names[i] = namesExtracted[i].innerText.replace(/ *\([^)]*\) */g, " ");
+        }
 
         // Add last names to the list
-        var maxNames = names.length;
-        for (var i = 0; i < maxNames; i++) {
-            var lastName = getLastName(names[i]);
-            names.push(lastName);
-        }
-        return names;
+        // var maxNames = names.length;
+        // for (var i = 0; i < maxNames; i++) {
+        //     var lastName = getLastName(names[i]);
+        //     names[i].push(lastName);
+        // }
+
+        professorName = names[professorIndex];
+
+        return professorName;
 
     } catch (err) {
-        currentProfessorName = "undefined";
+        professorName = undefined;
     }
 }
 
 // This method interacts with background.js to retrieve the search page needed to find the rating for a professor
-function grabProfessorSearchPage(professorIndex, professorsOnPage, schoolName) {
+function grabProfessorSearchPage(professorIndex, currentProfessorNames, schoolName) {
 
     var message = {
         method: "POST",
         action: "xhttp",
-        url: "http://www.ratemyprofessors.com/search.jsp?queryBy=teacherName&schoolName=" + schoolName + "&queryoption=HEADER&query=" + professorsOnPage[0] + "&facetSearch=true",
+        url: "http://www.ratemyprofessors.com/search.jsp?queryBy=teacherName&schoolName=" + schoolName + "&queryoption=HEADER&query=" + currentProfessorNames.replace(/\s/g,'+') + "&facetSearch=true",
         data: "",
         link: rmpSearchURL,
         index: professorIndex,
-        professorNames: professorsOnPage
+        professorNames: currentProfessorNames
     };
 
-    chrome.runtime.sendMessage(message, getProfessorSearchPageCallback);
+    console.log(message.url);
+    chrome.runtime.sendMessage(message, grabProfessorSearchPageCallback);
 }
 
 // This function processes the response gotten from background.js
@@ -141,7 +166,6 @@ function grabProfessorSearchPageCallback(response) {
 
     var responseText = response.response;
     var resultsTest = responseText.indexOf("Your search didn't return any results.");
-
 
     if (foundResult(responseText)) {
         var htmlDoc = getDOMFromString(responseText);
@@ -160,33 +184,37 @@ function foundResult(text) {
     return (text.indexOf("Your search didn't return any results.") == -1);
 }
 
-function getProfessorRating(professorIndex, SearchPageURL) {
+function grabProfessorRating(professorIndex, SearchPageURL) {
 
     var message = {
         method: "POST",
         action: "xhttp",
-        url: searchPageURL,
+        url: rmpSearchURL,
         data: "",
         link: SearchPageURL,
         index: professorIndex
 
     };
 
-    chrome.runtime.sendMessage(message, getProfessorRatingCallback);
+    console.log(rmpSearchURL);
+
+    chrome.runtime.sendMessage(message, grabProfessorRatingCallback);
 }
 
-function getProfessorRatingCallback(response) {
+function grabProfessorRatingCallback(response) {
 
     var responseText = response.response;
     var htmlDoc = getDOMFromString(responseText);
+
+    console.log(professorName);
 
     if (!isNaN(htmlDoc.getElementsByClassName("grade")[0].innerHTML)) {
         professorRating = htmlDoc.getElementsByClassName("grade")[0].innerHTML;
     }
 
-    var professorID = document.getElementById("ptifrmtgtframe").contentWindow.document.getElementById(professorMethodID + response.professorIndex);
+	var professorRetrieval = document.querySelectorAll('.email')[response.professorIndex];
 
-    addRatingToPage(professorID, professorRating, response.searchPageURL);
+    addRatingToPage(professorRetrieval, professorRating, response.rmpSearchURL);
 }
 
 function getDOMFromString(textHTML) {
@@ -197,11 +225,11 @@ function getDOMFromString(textHTML) {
     return tempDiv;
 }
 
-function addRatingToPage(professorID, ProfessorRating, SearchPageURL) {
+function addRatingToPage(professorRetrieval, ProfessorRating, SearchPageURL) {
 
     var span = document.createElement("span"); // Created to separate professor name and score in the HTML
     var link = document.createElement("a");
-    var space = document.createTextNode(" "); // Create a space between professor name and rating
+    var newline = document.createTextNode(" "); // Create a space between professor name and rating
     var professorRatingTextNode = document.createTextNode(ProfessorRating); // The text with the professor rating
 
     if (ProfessorRating < 3.5) {
@@ -213,29 +241,25 @@ function addRatingToPage(professorID, ProfessorRating, SearchPageURL) {
     }
 
     span.style.fontWeight = "bold"; // bold it
+    span.style["white-space"] = "nowrap";
 
     link.href = SearchPageURL; // make the link
     link.target = "_blank"; // open a new tab when clicked
 
     // append everything together
     link.appendChild(professorRatingTextNode);
-    span.appendChild(space);
+    span.appendChild(newline);
     span.appendChild(link);
-    professorID.appendChild(span);
+    professorRetrieval.appendChild(span);
 }
 
-function getLastName(fullName) {
-    var comp = fullName.split(" ");
+//     var comp = fullName.split(" ");
 
-    if (comp.length == 1) {
-        return comp[0]; //Case for Doe
-    } else if (comp.length == 2) {
-        return comp[1]; //case for John Doe
-    } else if (comp.length == 3) {
-        return comp[2]; //case for John M. Doe
-    }
-}
-
-
-
-
+//     if (comp.length == 1) {
+//         return comp[0]; //Case for Doe
+//     } else if (comp.length == 2) {
+//         return comp[1]; //case for John Doe
+//     } else if (comp.length == 3) {
+//         return comp[2]; //case for John M. Doe
+//     }
+// }
