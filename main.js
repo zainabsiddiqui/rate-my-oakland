@@ -15,6 +15,7 @@ var professorRating = ""; // This is the numeric rating for a certain professor
 var professors = {}; // This houses the professors searched for already
 
 var triesCount;
+var professorRetrieval;
 
 var professorMethodClass = "instructor-col"; // This is the class attribute used in OU's registration system to designate professor names
 
@@ -77,7 +78,6 @@ function runScript() {
     var numberOfProfessors = document.querySelector('.KeyTable').getAttribute('summary').match(/\d+/).pop();
     var all = "";
 
-
     // while(professorIndex < numberOfProfessors) {
     // 	currentProfessorNames = grabProfessorNames(professorIndex);
     // 	console.log(currentProfessorNames);
@@ -86,22 +86,25 @@ function runScript() {
 
      while (professorName !== undefined) {
 
-        currentProfessorNames = grabProfessorNames(professorIndex);
+        var currentProfessorNames = grabProfessorNames(professorIndex);
 
         if(currentProfessorNames == undefined) {
         	break;
         }
 
-        console.log(currentProfessorNames);
 
         if (isValidName(professorName)) {
             triesCount = 0;
             grabProfessorSearchPage(professorIndex, currentProfessorNames, schoolName);
+            if(currentProfessorNames == undefined || professorRetrieval == undefined) {
+            	break;
+            }
         } else {
             //TODO: Future Implementation.
             professors.professorName = {};
             professors.professorName.professorRating = "N/A";
         }
+
 
         professorIndex++;
     }
@@ -157,7 +160,8 @@ function grabProfessorSearchPage(professorIndex, currentProfessorNames, schoolNa
         professorNames: currentProfessorNames
     };
 
-    console.log(message.url);
+    // console.log(message.url);
+
     chrome.runtime.sendMessage(message, grabProfessorSearchPageCallback);
 }
 
@@ -196,7 +200,6 @@ function grabProfessorRating(professorIndex, SearchPageURL) {
 
     };
 
-    console.log(rmpSearchURL);
 
     chrome.runtime.sendMessage(message, grabProfessorRatingCallback);
 }
@@ -206,15 +209,17 @@ function grabProfessorRatingCallback(response) {
     var responseText = response.response;
     var htmlDoc = getDOMFromString(responseText);
 
-    console.log(professorName);
 
     if (!isNaN(htmlDoc.getElementsByClassName("grade")[0].innerHTML)) {
         professorRating = htmlDoc.getElementsByClassName("grade")[0].innerHTML;
     }
 
-	var professorRetrieval = document.querySelectorAll('.email')[response.professorIndex];
+	professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex];
+
 
     addRatingToPage(professorRetrieval, professorRating, response.rmpSearchURL);
+
+
 }
 
 function getDOMFromString(textHTML) {
@@ -229,7 +234,6 @@ function addRatingToPage(professorRetrieval, ProfessorRating, SearchPageURL) {
 
     var span = document.createElement("span"); // Created to separate professor name and score in the HTML
     var link = document.createElement("a");
-    var newline = document.createTextNode(" "); // Create a space between professor name and rating
     var professorRatingTextNode = document.createTextNode(ProfessorRating); // The text with the professor rating
 
     if (ProfessorRating < 3.5) {
@@ -241,16 +245,19 @@ function addRatingToPage(professorRetrieval, ProfessorRating, SearchPageURL) {
     }
 
     span.style.fontWeight = "bold"; // bold it
-    span.style["white-space"] = "nowrap";
+    span.style.display = "block"; // puts rating on new line
 
-    link.href = SearchPageURL; // make the link
+
+    link.setAttribute("href", SearchPageURL); // make the link
     link.target = "_blank"; // open a new tab when clicked
+
+    // console.log(link);
 
     // append everything together
     link.appendChild(professorRatingTextNode);
-    span.appendChild(newline);
     span.appendChild(link);
     professorRetrieval.appendChild(span);
+
 }
 
 //     var comp = fullName.split(" ");
