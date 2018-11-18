@@ -16,13 +16,14 @@ var professors = {}; // This houses the professors searched for already
 
 var triesCount;
 var professorRetrieval;
+var listenerTries = 0;
 
 var professorMethodClass = "instructor-col"; // This is the class attribute used in OU's registration system to designate professor names
 
 
 // This fires the listener function below if any change is detected on the page
 var timeout = null;
-document.addEventListener("DOMSubtreeModified",
+document.addEventListener("keypress",
 	function() {
 		if(timeout) {
 			clearTimeout(timeout);
@@ -31,8 +32,10 @@ document.addEventListener("DOMSubtreeModified",
 	}, false); 
 
 
+
 // This function runs the main script if it detects OU's class search page
 function listener() {
+    console.log("Listener tries: " + ++listenerTries);
     resetValues();
     if(detectClassSearchPage()) {
     	runScript();
@@ -45,6 +48,8 @@ function resetValues() {
     ratingsPageURL = "";
     rmpSearchURL = "";
     professorRating = "";
+    professorIndex = 0;
+
 }
 
 
@@ -74,8 +79,9 @@ function runScript() {
 
     var schoolName = encodeURI("oakland university");
 
-    var professorIndex = 0;
+    professorIndex = 0;
     var numberOfProfessors = document.querySelector('.KeyTable').getAttribute('summary').match(/\d+/).pop();
+    console.log(numberOfProfessors);
     var all = "";
 
     // while(professorIndex < numberOfProfessors) {
@@ -96,9 +102,10 @@ function runScript() {
         if (isValidName(professorName)) {
             triesCount = 0;
             grabProfessorSearchPage(professorIndex, currentProfessorNames, schoolName);
-            if(currentProfessorNames == undefined || professorRetrieval == undefined) {
+            if(currentProfessorNames == undefined) {
             	break;
             }
+
         } else {
             //TODO: Future Implementation.
             professors.professorName = {};
@@ -116,7 +123,8 @@ function isValidName(name) {
     return (professorName !== "Staff" &&
         professorName !== "undefined" &&
         professorName !== "TBA" &&
-        professorName !== "TBD");
+        professorName !== "TBD" &&
+        professorName !== "");
 }
 
 // This function grabs professor names from the class search webpage HTML
@@ -145,6 +153,7 @@ function grabProfessorNames(professorIndex) {
     } catch (err) {
         professorName = undefined;
     }
+
 }
 
 // This method interacts with background.js to retrieve the search page needed to find the rating for a professor
@@ -160,27 +169,31 @@ function grabProfessorSearchPage(professorIndex, currentProfessorNames, schoolNa
         professorNames: currentProfessorNames
     };
 
-    // console.log(message.url);
 
     chrome.runtime.sendMessage(message, grabProfessorSearchPageCallback);
+
+
 }
 
 // This function processes the response gotten from background.js
 function grabProfessorSearchPageCallback(response) {
 
     var responseText = response.response;
-    var resultsTest = responseText.indexOf("Your search didn't return any results.");
 
     if (foundResult(responseText)) {
+        console.log(foundResult(responseText));
         var htmlDoc = getDOMFromString(responseText);
         var professorClass = htmlDoc.getElementsByClassName("listing PROFESSOR")[0].getElementsByTagName("a")[0];
         rmpSearchURL = "http://www.ratemyprofessors.com" + professorClass.getAttribute("href");
         grabProfessorRating(response.professorIndex, rmpSearchURL);
 
     } else if(triesCount < response.professorNames.length) {
-        grabProfessorSearchPage(response.professorIndex, response.professorNames[triesCount], encodeURI("oakland university"));
-        triesCount++;
+        // grabProfessorSearchPage(response.professorIndex, response.professorNames[triesCount], encodeURI("oakland university"));
+        // triesCount++;
+        return;
     }
+
+
 }
 
 // Only if we have found a result for the professor do we do anything
@@ -202,6 +215,8 @@ function grabProfessorRating(professorIndex, SearchPageURL) {
 
 
     chrome.runtime.sendMessage(message, grabProfessorRatingCallback);
+
+
 }
 
 function grabProfessorRatingCallback(response) {
@@ -214,12 +229,22 @@ function grabProfessorRatingCallback(response) {
         professorRating = htmlDoc.getElementsByClassName("grade")[0].innerHTML;
     }
 
+
+    // while(!document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex].hasChildNodes()) {
+    //     response.professorIndex++;
+    // }
+
 	professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex];
 
+    while(!professorRetrieval.hasChildNodes()) {
+        professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[++response.professorIndex];
+    }
 
-    addRatingToPage(professorRetrieval, professorRating, response.rmpSearchURL);
+    console.log(response.rmpSearchURL);
 
+    addRatingToPage(professorRetrieval, professorRating, response.searchPageURL);
 
+    
 }
 
 function getDOMFromString(textHTML) {
@@ -231,42 +256,46 @@ function getDOMFromString(textHTML) {
 }
 
 function addRatingToPage(professorRetrieval, ProfessorRating, SearchPageURL) {
-
     var span = document.createElement("span"); // Created to separate professor name and score in the HTML
     var link = document.createElement("a");
     var professorRatingTextNode = document.createTextNode(ProfessorRating); // The text with the professor rating
 
-    if (ProfessorRating < 3.5) {
-        link.style.color = "#8A0808"; // red = bad
-    } else if (ProfessorRating >= 3.5 && ProfessorRating < 4) {
-        link.style.color = "#FFBF00"; // yellow/orange = okay
+    if (ProfessorRating < 3.0) {
+        span.style["background-color"] = "#B22222"; // red = bad
+        span.style.border = "0px solid"
+    } else if (ProfessorRating >= 3.0 && ProfessorRating < 4) {
+        span.style["background-color"] = "#FF8C00"; // yellow/orange = okay
+        span.style.border = "0px solid"
     } else if (ProfessorRating >= 4 && ProfessorRating <= 5) {
-        link.style.color = "#298A08"; // green = good
+        span.style["background-color"] = "#006400"; // green = good
+        span.style.border = "0px solid"
+
     }
 
-    span.style.fontWeight = "bold"; // bold it
-    span.style.display = "block"; // puts rating on new line
+    
+
+    span.setAttribute("title", "Hi, this is my tooltip");
+
+    // style the rating before adding
+    span.style["border-radius"] = "2px";
+    link.style.color = "white";
+    span.style["margin-top"] = "2px";
+    span.style.padding = "2px";
+    span.style.display = "block";
+    span.style.float = "left";
+    span.style.clear = "left";
+    link.style["text-decoration"] = "none";
 
 
     link.setAttribute("href", SearchPageURL); // make the link
     link.target = "_blank"; // open a new tab when clicked
 
-    // console.log(link);
 
     // append everything together
-    link.appendChild(professorRatingTextNode);
-    span.appendChild(link);
-    professorRetrieval.appendChild(span);
+  	link.appendChild(professorRatingTextNode);
+	span.appendChild(link);
+	professorRetrieval.appendChild(span);
+
 
 }
 
-//     var comp = fullName.split(" ");
-
-//     if (comp.length == 1) {
-//         return comp[0]; //Case for Doe
-//     } else if (comp.length == 2) {
-//         return comp[1]; //case for John Doe
-//     } else if (comp.length == 3) {
-//         return comp[2]; //case for John M. Doe
-//     }
-// }
