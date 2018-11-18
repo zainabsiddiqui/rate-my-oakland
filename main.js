@@ -17,6 +17,8 @@ var professors = {}; // This houses the professors searched for already
 var triesCount;
 var professorRetrieval;
 var listenerTries = 0;
+var wouldTakeAgain = "";
+var difficultyRating = "";
 
 var professorMethodClass = "instructor-col"; // This is the class attribute used in OU's registration system to designate professor names
 
@@ -49,7 +51,8 @@ function resetValues() {
     rmpSearchURL = "";
     professorRating = "";
     professorIndex = 0;
-
+    difficultyRating = "";
+    wouldTakeAgain = "";
 }
 
 
@@ -224,11 +227,17 @@ function grabProfessorRatingCallback(response) {
     var responseText = response.response;
     var htmlDoc = getDOMFromString(responseText);
 
+    var gradeElements = htmlDoc.getElementsByClassName("grade");
 
-    if (!isNaN(htmlDoc.getElementsByClassName("grade")[0].innerHTML)) {
-        professorRating = htmlDoc.getElementsByClassName("grade")[0].innerHTML;
+
+    if (!isNaN(gradeElements[0].innerHTML)) {
+        professorRating = gradeElements[0].innerHTML;
+        wouldTakeAgain = gradeElements[1].innerHTML.replace(/^\s+|\s+$|\s+(?=\s)/g, "");
+        difficultyRating = gradeElements[2].innerHTML.replace(/^\s+|\s+$|\s+(?=\s)/g, "");
     }
 
+    console.log(wouldTakeAgain);
+    console.log(difficultyRating);
 
     // while(!document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex].hasChildNodes()) {
     //     response.professorIndex++;
@@ -240,9 +249,8 @@ function grabProfessorRatingCallback(response) {
         professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[++response.professorIndex];
     }
 
-    console.log(response.rmpSearchURL);
 
-    addRatingToPage(professorRetrieval, professorRating, response.searchPageURL);
+    addRatingToPage(professorRetrieval, professorRating, wouldTakeAgain, difficultyRating, response.searchPageURL);
 
     
 }
@@ -255,7 +263,7 @@ function getDOMFromString(textHTML) {
     return tempDiv;
 }
 
-function addRatingToPage(professorRetrieval, ProfessorRating, SearchPageURL) {
+function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, DifficultyRating, SearchPageURL) {
     var span = document.createElement("span"); // Created to separate professor name and score in the HTML
     var link = document.createElement("a");
     var professorRatingTextNode = document.createTextNode(ProfessorRating); // The text with the professor rating
@@ -272,9 +280,9 @@ function addRatingToPage(professorRetrieval, ProfessorRating, SearchPageURL) {
 
     }
 
-    
 
-    span.setAttribute("title", "Hi, this is my tooltip");
+
+    span.setAttribute("title", "Would Take Again: " + wouldTakeAgain + ", Difficulty Rating: " + difficultyRating);
 
     // style the rating before adding
     span.style["border-radius"] = "2px";
