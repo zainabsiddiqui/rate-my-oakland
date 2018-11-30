@@ -19,29 +19,35 @@ var professorRetrieval;
 var listenerTries = 0;
 var wouldTakeAgain = "";
 var difficultyRating = "";
+var recentReview = "";
 
 var professorMethodClass = "instructor-col"; // This is the class attribute used in OU's registration system to designate professor names
 
 
 // This fires the listener function below if any change is detected on the page
 var timeout = null;
-document.addEventListener("keypress",
-	function() {
-		if(timeout) {
-			clearTimeout(timeout);
-		}
-		timeout = setTimeout(listener, 1000);
-	}, false); 
+document.addEventListener("keyup", checkKey); 
 
-
+function checkKey(e) {
+    var key = e.which || e.keyCode;
+    if (key === 38) {
+        if(timeout) {
+            clearTimeout(timeout);
+        }
+        timeout = setTimeout(listener, 1000);
+    } 
+}
 
 // This function runs the main script if it detects OU's class search page
 function listener() {
     console.log("Listener tries: " + ++listenerTries);
     resetValues();
     if(detectClassSearchPage()) {
+        console.log("hoo");
     	runScript();
+        console.log("ha");
 	}
+    console.log("whoa");
 }
 
 // This function resets our global variables
@@ -50,9 +56,9 @@ function resetValues() {
     ratingsPageURL = "";
     rmpSearchURL = "";
     professorRating = "";
-    professorIndex = 0;
     difficultyRating = "";
     wouldTakeAgain = "";
+    recentReview = "";
 }
 
 
@@ -60,7 +66,8 @@ function resetValues() {
 function detectClassSearchPage() {
     try {
     	// This finds the HTML tag that houses instructor listings on the class search page
-        var classSearchMethod = document.querySelector('.instructor-col');
+        var classSearchMethod = document.querySelector(".instructor-col");
+        console.log(classSearchMethod);
 
         if (classSearchMethod != undefined) {
         	console.log("OMG YAY!");
@@ -83,9 +90,7 @@ function runScript() {
     var schoolName = encodeURI("oakland university");
 
     professorIndex = 0;
-    var numberOfProfessors = document.querySelector('.KeyTable').getAttribute('summary').match(/\d+/).pop();
-    console.log(numberOfProfessors);
-    var all = "";
+    // var numberOfProfessors = document.querySelector('.KeyTable').getAttribute('summary').match(/\d+/).pop();
 
     // while(professorIndex < numberOfProfessors) {
     // 	currentProfessorNames = grabProfessorNames(professorIndex);
@@ -97,12 +102,14 @@ function runScript() {
 
         var currentProfessorNames = grabProfessorNames(professorIndex);
 
+
         if(currentProfessorNames == undefined) {
         	break;
         }
 
 
-        if (isValidName(professorName)) {
+
+        if (isValidName(currentProfessorNames)) {
             triesCount = 0;
             grabProfessorSearchPage(professorIndex, currentProfessorNames, schoolName);
             if(currentProfessorNames == undefined) {
@@ -123,11 +130,11 @@ function runScript() {
 
 // This function returns true if there is a professor listed/if the professor listed is undefined or not yet announced
 function isValidName(name) {
-    return (professorName !== "Staff" &&
-        professorName !== "undefined" &&
-        professorName !== "TBA" &&
-        professorName !== "TBD" &&
-        professorName !== "");
+    return (name !== "Staff" &&
+        name !== "undefined" &&
+        name !== "TBA" &&
+        name !== "TBD" &&
+        name !== "");
 }
 
 // This function grabs professor names from the class search webpage HTML
@@ -186,6 +193,8 @@ function grabProfessorSearchPageCallback(response) {
     if (foundResult(responseText)) {
         console.log(foundResult(responseText));
         var htmlDoc = getDOMFromString(responseText);
+        var numOfResults = htmlDoc.getElementsByClassName("result-count")[0].innerHTML.match(/[0-9]+(?!.*[0-9])/);
+        console.log(numOfResults);
         var professorClass = htmlDoc.getElementsByClassName("listing PROFESSOR")[0].getElementsByTagName("a")[0];
         rmpSearchURL = "http://www.ratemyprofessors.com" + professorClass.getAttribute("href");
         grabProfessorRating(response.professorIndex, rmpSearchURL);
@@ -228,16 +237,18 @@ function grabProfessorRatingCallback(response) {
     var htmlDoc = getDOMFromString(responseText);
 
     var gradeElements = htmlDoc.getElementsByClassName("grade");
+    var className = "";
 
 
     if (!isNaN(gradeElements[0].innerHTML)) {
         professorRating = gradeElements[0].innerHTML;
         wouldTakeAgain = gradeElements[1].innerHTML.replace(/^\s+|\s+$|\s+(?=\s)/g, "");
         difficultyRating = gradeElements[2].innerHTML.replace(/^\s+|\s+$|\s+(?=\s)/g, "");
+        recentReview = htmlDoc.getElementsByClassName("commentsParagraph")[0].innerHTML.replace(/^\s+|\s+$|\s+(?=\s)/g, "");
+        className = htmlDoc.getElementsByClassName("response")[0].innerHTML;
     }
 
-    console.log(wouldTakeAgain);
-    console.log(difficultyRating);
+
 
     // while(!document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex].hasChildNodes()) {
     //     response.professorIndex++;
@@ -250,7 +261,8 @@ function grabProfessorRatingCallback(response) {
     }
 
 
-    addRatingToPage(professorRetrieval, professorRating, wouldTakeAgain, difficultyRating, response.searchPageURL);
+    addRatingToPage(professorRetrieval, professorRating, wouldTakeAgain, difficultyRating, recentReview, 
+        className, response.searchPageURL);
 
     
 }
@@ -263,7 +275,7 @@ function getDOMFromString(textHTML) {
     return tempDiv;
 }
 
-function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, DifficultyRating, SearchPageURL) {
+function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, DifficultyRating, RecentReview, ClassName, SearchPageURL) {
     var span = document.createElement("span"); // Created to separate professor name and score in the HTML
     var link = document.createElement("a");
     var professorRatingTextNode = document.createTextNode(ProfessorRating); // The text with the professor rating
@@ -280,9 +292,17 @@ function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, Di
 
     }
 
+    span.setAttribute("title", "<strong>Would Take Again:</strong> " + wouldTakeAgain  +
+        "<br /><strong>Difficulty Rating:</strong> " + difficultyRating + "<br /><strong>Most Recent Review</strong> (for " + ClassName + "): " + recentReview);
+    $(span).tooltip({
+        content: function() {
+            return $(this).attr('title');
+        },
+        classes: {
+            "ui-tooltip": "tooltip"
+        }
+    });
 
-
-    span.setAttribute("title", "Would Take Again: " + wouldTakeAgain + ", Difficulty Rating: " + difficultyRating);
 
     // style the rating before adding
     span.style["border-radius"] = "2px";
@@ -303,7 +323,6 @@ function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, Di
   	link.appendChild(professorRatingTextNode);
 	span.appendChild(link);
 	professorRetrieval.appendChild(span);
-
 
 }
 

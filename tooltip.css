@@ -1,0 +1,5 @@
+.tooltip {
+  opacity: 0.9 !important;
+  filter:alpha(opacity=90) !important;   
+  max-width: 400px !important;  
+}
