@@ -23,31 +23,14 @@ var recentReview = "";
 
 var professorMethodClass = "instructor-col"; // This is the class attribute used in OU's registration system to designate professor names
 
-
-// This fires the listener function below if any change is detected on the page
-var timeout = null;
-document.addEventListener("keyup", checkKey); 
-
-function checkKey(e) {
-    var key = e.which || e.keyCode;
-    if (key === 32) {
-        if(timeout) {
-            clearTimeout(timeout);
-        }
-        timeout = setTimeout(listener, 1000);
-    } 
-}
+listener();
 
 // This function runs the main script if it detects OU's class search page
 function listener() {
-    console.log("Listener tries: " + ++listenerTries);
-    resetValues();
-    if(detectClassSearchPage()) {
-        console.log("hoo");
-    	runScript();
-        console.log("ha");
-	}
-    console.log("whoa");
+        resetValues();
+        if(detectClassSearchPage()) {
+        	runScript();
+    	}
 }
 
 // This function resets our global variables
@@ -67,7 +50,6 @@ function detectClassSearchPage() {
     try {
     	// This finds the HTML tag that houses instructor listings on the class search page
         var classSearchMethod = document.querySelector(".instructor-col");
-        console.log(classSearchMethod);
 
         if (classSearchMethod != undefined) {
         	console.log("OMG YAY!");
@@ -90,13 +72,6 @@ function runScript() {
     var schoolName = encodeURI("oakland university");
 
     professorIndex = 0;
-    // var numberOfProfessors = document.querySelector('.KeyTable').getAttribute('summary').match(/\d+/).pop();
-
-    // while(professorIndex < numberOfProfessors) {
-    // 	currentProfessorNames = grabProfessorNames(professorIndex);
-    // 	console.log(currentProfessorNames);
-    // 	professorIndex++;
-    // }
 
      while (professorName !== undefined) {
 
@@ -194,7 +169,6 @@ function grabProfessorSearchPageCallback(response) {
         console.log(foundResult(responseText));
         var htmlDoc = getDOMFromString(responseText);
         var numOfResults = htmlDoc.getElementsByClassName("result-count")[0].innerHTML.match(/[0-9]+(?!.*[0-9])/);
-        console.log(numOfResults);
         var professorClass = htmlDoc.getElementsByClassName("listing PROFESSOR")[0].getElementsByTagName("a")[0];
         rmpSearchURL = "http://www.ratemyprofessors.com" + professorClass.getAttribute("href");
         grabProfessorRating(response.professorIndex, rmpSearchURL);
