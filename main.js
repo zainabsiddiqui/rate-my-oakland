@@ -174,8 +174,6 @@ function grabProfessorSearchPageCallback(response) {
         grabProfessorRating(response.professorIndex, rmpSearchURL);
 
     } else if(triesCount < response.professorNames.length) {
-        // grabProfessorSearchPage(response.professorIndex, response.professorNames[triesCount], encodeURI("oakland university"));
-        // triesCount++;
         return;
     }
 
@@ -265,11 +263,13 @@ function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, Di
         span.style.border = "0px solid";
     }
 
-     span.setAttribute("title", "<h3 class = 'more-info'>More Info</h3><hr><strong>" + NumRatings + 
+     span.setAttribute("title", "<h3 class = 'more-info'>More Info</h3><br /><p class = 'disclaimer'>Disclaimer: " 
+        + "RateMyOakland does not guarantee the accuracy of these ratings and reviews.</p><hr><strong>" + NumRatings + 
         "</strong> Ratings Available<hr>Would Take Again: <strong class = 'percentage'>" + wouldTakeAgain  +
         "</strong>, Difficulty Rating: <strong class = 'difficulty'>" + difficultyRating + 
         "</strong><hr><strong>Most Recent Review:</strong><br /><blockquote>" + recentReview + "<cite>" +
         "Someone who took " + ClassName + "</cite></blockquote>");
+
     $(span).tooltip({
         content: function() {
             return $(this).attr('title');
