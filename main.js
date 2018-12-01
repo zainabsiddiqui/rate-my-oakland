@@ -30,7 +30,7 @@ document.addEventListener("keyup", checkKey);
 
 function checkKey(e) {
     var key = e.which || e.keyCode;
-    if (key === 38) {
+    if (key === 32) {
         if(timeout) {
             clearTimeout(timeout);
         }
@@ -238,6 +238,7 @@ function grabProfessorRatingCallback(response) {
 
     var gradeElements = htmlDoc.getElementsByClassName("grade");
     var className = "";
+    var numRatings = "";
 
 
     if (!isNaN(gradeElements[0].innerHTML)) {
@@ -246,13 +247,8 @@ function grabProfessorRatingCallback(response) {
         difficultyRating = gradeElements[2].innerHTML.replace(/^\s+|\s+$|\s+(?=\s)/g, "");
         recentReview = htmlDoc.getElementsByClassName("commentsParagraph")[0].innerHTML.replace(/^\s+|\s+$|\s+(?=\s)/g, "");
         className = htmlDoc.getElementsByClassName("response")[0].innerHTML;
+        numRatings = htmlDoc.getElementsByClassName("rating-count")[0].innerHTML.replace(/\D/g, "");
     }
-
-
-
-    // while(!document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex].hasChildNodes()) {
-    //     response.professorIndex++;
-    // }
 
 	professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex];
 
@@ -262,7 +258,7 @@ function grabProfessorRatingCallback(response) {
 
 
     addRatingToPage(professorRetrieval, professorRating, wouldTakeAgain, difficultyRating, recentReview, 
-        className, response.searchPageURL);
+        className, response.searchPageURL, numRatings);
 
     
 }
@@ -275,25 +271,31 @@ function getDOMFromString(textHTML) {
     return tempDiv;
 }
 
-function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, DifficultyRating, RecentReview, ClassName, SearchPageURL) {
+function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, DifficultyRating, RecentReview, 
+    ClassName, SearchPageURL, NumRatings) {
     var span = document.createElement("span"); // Created to separate professor name and score in the HTML
     var link = document.createElement("a");
     var professorRatingTextNode = document.createTextNode(ProfessorRating); // The text with the professor rating
 
-    if (ProfessorRating < 3.0) {
+     if (ProfessorRating >= 1.0 && ProfessorRating < 2) {
         span.style["background-color"] = "#B22222"; // red = bad
-        span.style.border = "0px solid"
+        span.style.border = "0px solid";
+    } else if (ProfessorRating >= 2.0 && ProfessorRating < 3) {
+        span.style["background-color"] = "#B22222"; // red = bad
+        span.style.border = "0px solid";
     } else if (ProfessorRating >= 3.0 && ProfessorRating < 4) {
         span.style["background-color"] = "#FF8C00"; // yellow/orange = okay
-        span.style.border = "0px solid"
+        span.style.border = "0px solid";
     } else if (ProfessorRating >= 4 && ProfessorRating <= 5) {
         span.style["background-color"] = "#006400"; // green = good
-        span.style.border = "0px solid"
-
+        span.style.border = "0px solid";
     }
 
-    span.setAttribute("title", "<strong>Would Take Again:</strong> " + wouldTakeAgain  +
-        "<br /><strong>Difficulty Rating:</strong> " + difficultyRating + "<br /><strong>Most Recent Review</strong> (for " + ClassName + "): " + recentReview);
+     span.setAttribute("title", "<h3 class = 'more-info'>More Info</h3><hr><strong>" + NumRatings + 
+        "</strong> Ratings Available<hr>Would Take Again: <strong class = 'percentage'>" + wouldTakeAgain  +
+        "</strong>, Difficulty Rating: <strong class = 'difficulty'>" + difficultyRating + 
+        "</strong><hr><strong>Most Recent Review:</strong><br /><blockquote>" + recentReview + "<cite>" +
+        "Someone who took " + ClassName + "</cite></blockquote>");
     $(span).tooltip({
         content: function() {
             return $(this).attr('title');
@@ -302,7 +304,6 @@ function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, Di
             "ui-tooltip": "tooltip"
         }
     });
-
 
     // style the rating before adding
     span.style["border-radius"] = "2px";
