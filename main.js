@@ -2,8 +2,6 @@
 * 
 * RateMyOakland - A Google Chrome extension
 *
-* Created by Zainab Siddiqui, Ian Ray, Audrey Nguyen, Ariana Lee, and Karen Feun
-*
 * This file is where all the magic happens.
 *
 **/
@@ -12,16 +10,18 @@ var professorName = ""; // This is the name of the professor currently being sea
 var rmpSearchURL = ""; // This is the URL being used to search for a certain professor
 var professorRating = ""; // This is the numeric rating for a certain professor
 
-var professors = {}; // This houses the professors searched for already
+var numTries;
 
-var triesCount;
-var professorRetrieval;
-var listenerTries = 0;
-var wouldTakeAgain = "";
-var difficultyRating = "";
-var recentReview = "";
+var wouldTakeAgain = ""; // This is the percentage of people who would take the professor again
+var difficultyRating = ""; // This is a professor's difficulty rating
+var recentReview = ""; // This is a professor's most recent review
+var className = ""; // This holds the class the professor's most recent review was regarding
+var professorRetrieval; // This is the variable that contains the HTML element where professor name is in the table
 
-var professorMethodClass = "instructor-col"; // This is the class attribute used in OU's registration system to designate professor names
+var numRatings = ""; // This is the number of ratings a professor's RMP page has
+var fullName = ""; // This holds the professor's name as it is listed in RMP
+var title = ""; // This holds the professor's position and department
+var topThreeTags = [];
 
 listener();
 
@@ -39,10 +39,15 @@ function resetValues() {
     ratingsPageURL = "";
     rmpSearchURL = "";
     professorRating = "";
-    difficultyRating = "";
-    wouldTakeAgain = "";
-    recentReview = "";
     professorRetrieval = "";
+    wouldTakeAgain = "";
+    difficultyRating = "";
+    recentReview = "";
+    numRatings = "";
+    fullName = "";
+    title = "";
+    className = "";
+    topThreeTags = [];
 }
 
 
@@ -66,10 +71,6 @@ function detectClassSearchPage() {
 // This is the main function: it grabs the professor names on the page and the search page for each professor
 function runScript() {
 
-    professors.exits = function(name) {
-        return this.hasOwnProperty(name);
-    };
-
     var schoolName = encodeURI("oakland university");
 
     professorIndex = 0;
@@ -89,16 +90,12 @@ function runScript() {
 
 
         if (isValidName(currentProfessorNames)) {
-            triesCount = 0;
+            numTries = 0;
             grabProfessorSearchPage(professorIndex, currentProfessorNames, schoolName);
             if(currentProfessorNames == undefined) {
             	break;
             }
 
-        } else {
-            //TODO: Future Implementation.
-            professors.professorName = {};
-            professors.professorName.professorRating = "N/A";
         }
 
 
@@ -178,7 +175,7 @@ function grabProfessorSearchPageCallback(response) {
         rmpSearchURL = "http://www.ratemyprofessors.com" + professorClass.getAttribute("href");
         grabProfessorRating(response.professorIndex, rmpSearchURL);
 
-    } else if(triesCount < response.professorNames.length) {
+    } else if(numTries < response.professorNames.length) {
         return;
     }
 
@@ -213,14 +210,13 @@ function grabProfessorRatingCallback(response) {
     var responseText = response.response;
     var htmlDoc = getDOMFromString(responseText);
 
-    var gradeElements = htmlDoc.getElementsByClassName("grade");
-    var className = "";
-    var numRatings = "";
-    var fullName = "";
-    var title = "";
+    grabProfessorInfo(htmlDoc, response);
+    
+}
 
+function grabProfessorInfo(htmlDoc, response) {
+    var gradeElements = htmlDoc.getElementsByClassName("grade");
     var tags = htmlDoc.getElementsByClassName("tag-box-choosetags");
-    var topThreeTags = [];
 
 
     if (!isNaN(gradeElements[0].innerHTML)) {
@@ -249,7 +245,7 @@ function grabProfessorRatingCallback(response) {
         console.log(topThreeTags[0]);
     }
 
-	professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex];
+    professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex];
 
     while(!professorRetrieval.hasChildNodes()) {
         professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex++];
@@ -257,8 +253,6 @@ function grabProfessorRatingCallback(response) {
 
     addRatingToPage(professorRetrieval, professorRating, wouldTakeAgain, difficultyRating, recentReview, 
         className, response.searchPageURL, numRatings, fullName, title, topThreeTags);
-
-    
 }
 
 function getDOMFromString(textHTML) {
