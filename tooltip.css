@@ -4,45 +4,12 @@
   max-width: 255px !important;  
 }
 
-.red {
-    background-color: #008B8B;
-    color: white;
-    border: 0px solid;
-    border-radius: 2px;
-    margin-top: 2px 0 2px 0;
-    padding: 4px;
-    line-height: 2.2;
-    white-space: nowrap;
-}
-
 .black {
     background-color: #000000;
     color: white;
     border: 0px solid;
     border-radius: 2px;
     margin-top: 2px 0 2px 0;
-    padding: 4px;
-    line-height: 2.2;
-    white-space: nowrap;
-}
-
-.green {
-    background-color: #9932CC;
-    color: white;
-    border: 0px solid;
-    border-radius: 2px;
-    margin-top: 2px;
-    padding: 4px;
-    line-height: 2.2;
-    white-space: nowrap;
-}
-
-.blue {
-    background-color: #4169E1;
-    color: white;
-    border: 0px solid;
-    border-radius: 2px;
-    margin-top: 2px;
     padding: 4px;
     line-height: 2.2;
     white-space: nowrap;
