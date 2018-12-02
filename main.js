@@ -42,6 +42,7 @@ function resetValues() {
     difficultyRating = "";
     wouldTakeAgain = "";
     recentReview = "";
+    professorRetrieval = "";
 }
 
 
@@ -73,9 +74,12 @@ function runScript() {
 
     professorIndex = 0;
 
+    var namesExtracted = document.querySelectorAll(".email");
+
+
      while (professorName !== undefined) {
 
-        var currentProfessorNames = grabProfessorNames(professorIndex);
+        var currentProfessorNames = grabProfessorNames(professorIndex, namesExtracted);
 
 
         if(currentProfessorNames == undefined) {
@@ -113,10 +117,11 @@ function isValidName(name) {
 }
 
 // This function grabs professor names from the class search webpage HTML
-function grabProfessorNames(professorIndex) {
+function grabProfessorNames(professorIndex, namesExtracted) {
     try {
 
-        var namesExtracted = document.querySelectorAll('.email');
+        // var namesCells = document.querySelectorAll("*[data-property='instructor']");
+
 
         var names = [];
 
@@ -211,26 +216,47 @@ function grabProfessorRatingCallback(response) {
     var gradeElements = htmlDoc.getElementsByClassName("grade");
     var className = "";
     var numRatings = "";
+    var fullName = "";
+    var title = "";
+
+    var tags = htmlDoc.getElementsByClassName("tag-box-choosetags");
+    var topThreeTags = [];
 
 
     if (!isNaN(gradeElements[0].innerHTML)) {
         professorRating = gradeElements[0].innerHTML;
+
         wouldTakeAgain = gradeElements[1].innerHTML.replace(/^\s+|\s+$|\s+(?=\s)/g, "");
+
         difficultyRating = gradeElements[2].innerHTML.replace(/^\s+|\s+$|\s+(?=\s)/g, "");
+
         recentReview = htmlDoc.getElementsByClassName("commentsParagraph")[0].innerHTML.replace(/^\s+|\s+$|\s+(?=\s)/g, "");
+
         className = htmlDoc.getElementsByClassName("response")[0].innerHTML;
+
         numRatings = htmlDoc.getElementsByClassName("rating-count")[0].innerHTML.replace(/\D/g, "");
+
+        fullName = (htmlDoc.getElementsByClassName("pfname")[0].innerHTML + " " + htmlDoc.getElementsByClassName("plname")[0].innerHTML).trim();
+
+        title = htmlDoc.getElementsByClassName("result-title")[0].innerHTML;
+        title = title.substring(0, title.indexOf("<br>"));
+
+        firstTag = tags[0].innerHTML.toLowerCase();
+        secondTag = tags[1].innerHTML.toLowerCase();
+        thirdTag = tags[2].innerHTML.toLowerCase();
+        topThreeTags = [firstTag.substring(0, firstTag.indexOf("<b>")).trim(), secondTag.substring(0, secondTag.indexOf("<b>")).trim(), 
+            thirdTag.substring(0, thirdTag.indexOf("<b>")).trim()];
+        console.log(topThreeTags[0]);
     }
 
 	professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex];
 
     while(!professorRetrieval.hasChildNodes()) {
-        professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[++response.professorIndex];
+        professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex++];
     }
 
-
     addRatingToPage(professorRetrieval, professorRating, wouldTakeAgain, difficultyRating, recentReview, 
-        className, response.searchPageURL, numRatings);
+        className, response.searchPageURL, numRatings, fullName, title, topThreeTags);
 
     
 }
@@ -244,10 +270,19 @@ function getDOMFromString(textHTML) {
 }
 
 function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, DifficultyRating, RecentReview, 
-    ClassName, SearchPageURL, NumRatings) {
+    ClassName, SearchPageURL, NumRatings, FullName, Title, TopTags) {
     var span = document.createElement("span"); // Created to separate professor name and score in the HTML
     var link = document.createElement("a");
     var professorRatingTextNode = document.createTextNode(ProfessorRating); // The text with the professor rating
+    var circle = document.createElement("span");
+
+    span.setAttribute("title", "<h3 class = 'more-info'>" + FullName + " (" + NumRatings + " Ratings)</h3><br /><p class = 'title'>" + Title +
+        "</p><hr>Would Take Again: <strong class = 'percentage'>" + wouldTakeAgain  +
+        "</strong>, Difficulty Rating: <strong class = 'difficulty'>" + difficultyRating + 
+        "</strong><hr><span class><strong>Tags:</strong></span> <span class = 'black'>" + TopTags[0] + "</span>  <span class = 'black'>" + TopTags[1] 
+        + "</span> <span class = 'black'>" + TopTags[2] + "</span><hr><strong>Most Recent Review:</strong><br /><blockquote>" 
+        + recentReview + "<cite>" +"Student who took " + ClassName + "</cite></blockquote>");
+
 
      if (ProfessorRating >= 1.0 && ProfessorRating < 2) {
         span.style["background-color"] = "#B22222"; // red = bad
@@ -263,12 +298,6 @@ function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, Di
         span.style.border = "0px solid";
     }
 
-     span.setAttribute("title", "<h3 class = 'more-info'>More Info</h3><br /><p class = 'disclaimer'>Disclaimer: " 
-        + "RateMyOakland does not guarantee the accuracy of these ratings and reviews.</p><hr><strong>" + NumRatings + 
-        "</strong> Ratings Available<hr>Would Take Again: <strong class = 'percentage'>" + wouldTakeAgain  +
-        "</strong>, Difficulty Rating: <strong class = 'difficulty'>" + difficultyRating + 
-        "</strong><hr><strong>Most Recent Review:</strong><br /><blockquote>" + recentReview + "<cite>" +
-        "Someone who took " + ClassName + "</cite></blockquote>");
 
     $(span).tooltip({
         content: function() {
