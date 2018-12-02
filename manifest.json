@@ -21,7 +21,7 @@
 
   "browser_action": {
       "default_icon": {
-        "16": "images/logo.png"
+        "16": "images/ToolbarIcon.png"
       }
     },
 
