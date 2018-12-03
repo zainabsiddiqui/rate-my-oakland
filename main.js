@@ -10,23 +10,20 @@ var professorName = ""; // This is the name of the professor currently being sea
 var rmpSearchURL = ""; // This is the URL being used to search for a certain professor
 var professorRating = ""; // This is the numeric rating for a certain professor
 
-
-var numTries;
-
 var wouldTakeAgain = ""; // This is the percentage of people who would take the professor again
 var difficultyRating = ""; // This is a professor's difficulty rating
 var recentReview = ""; // This is a professor's most recent review
 var className = ""; // This holds the class the professor's most recent review was regarding
 var professorRetrieval; // This is the variable that contains the HTML element where professor name is in the table
 
-var numRatings = ""; // This is the number of ratings a professor's RMP page has
+var numRatings = ""; // This is the number of student ratings a professor's RMP page has
 var fullName = ""; // This holds the professor's name as it is listed in RMP
 var title = ""; // This holds the professor's position and department
-var topThreeTags = [];
+var topThreeTags = []; // This holds the top three tags for a professor
 
 listener();
 
-// This function runs the main script if it detects OU's class search page
+/* This function runs the main script if it detects OU's class search page */
 function listener() {
         resetValues();
         if(detectClassSearchPage()) {
@@ -34,7 +31,7 @@ function listener() {
         }
 }
 
-// This function resets our global variables
+/* This function resets our global variables */
 function resetValues() {
     professorName = "";
     ratingsPageURL = "";
@@ -52,7 +49,7 @@ function resetValues() {
 }
 
 
-// This returns true if the user is on the OU class search page
+/* This returns true if the user is on the OU class search page */
 function detectClassSearchPage() {
     try {
         // This finds the HTML tag that houses instructor listings on the class search page
@@ -69,20 +66,21 @@ function detectClassSearchPage() {
     return false; // Class search page has not been found
 }
 
-// This is the main function: it grabs the professor names on the page and the search page for each professor
+/* This is the main function: it grabs the professor names on the page and the search page for each professor, which gets the rating */
 function runScript() {
 
     var schoolName = encodeURI("oakland university");
 
     var professorIndex = 0;
 
+    // Grab all the cells from the results table
     var namesCells = document.querySelectorAll("*[data-content='Instructor']");
+
+    // Convert to array
     var cellsArray = Array.prototype.slice.call(namesCells);
     var removed = [];
 
-    console.log("Got here!");
-
-
+    // Keep a record of the cells in the table which have multiple professors or no professor at all
     for(var i = 0; i < cellsArray.length; i++) {
         if(cellsArray[i].children.length > 2 | !cellsArray[i].hasChildNodes()) {
             cellsArray[i] = null;
@@ -93,41 +91,44 @@ function runScript() {
     var currentProfessorNames;
 
 
+    // Loop until we've gotten through all of the cells in the instructor column
      while (professorIndex < cellsArray.length) {
 
         if(removed.length > 0) {
+            // If the current cell is at one of the forbidden indices, we go to the next
             if(removed.includes(professorIndex)) {
                 professorIndex++;
                 continue;
             } 
         }
 
-
+        // Grab the name in the current cell
         currentProfessorNames = grabProfessorNames(professorIndex, cellsArray);
 
 
         if(currentProfessorNames == undefined) {
-            console.log("Oh no!");
             break;
         }
 
 
         if (isValidName(currentProfessorNames)) {
-            numTries = 0;
+
+            // Grab the RMP search page for the professor
             grabProfessorSearchPage(professorIndex, currentProfessorNames, schoolName);
+
             if(currentProfessorNames == undefined) {
                 break;
             }
 
         }
 
-
+        // Go on to next cell
         professorIndex++;
     }
 
-   }
+}
 
-// This function returns true if there is a professor listed/if the professor listed is undefined or not yet announced
+/* This function returns true if there is a professor listed/if the professor listed is undefined or not yet announced */
 function isValidName(name) {
     return (name !== "Staff" &&
         name !== "undefined" &&
@@ -136,28 +137,18 @@ function isValidName(name) {
         name !== "");
 }
 
-// This function grabs professor names from the class search webpage HTML
+/* This function grabs professor names from the class search table */
 function grabProfessorNames(professorIndex, cellsArray) {
     try {
 
         var names = [];
 
-        // cellsArray = cellsArray.filter(function(e){return e}); 
-
-        // console.log(cellsArray);
-
         for(var j = 0; j < cellsArray.length; j++) {
             if(cellsArray[j] !== null) {
+                // Grab the professor text in the cell
                 names[j] = cellsArray[j].firstChild.innerText.replace(/ *\([^)]*\) */g, " ");
             }
         }
-
-        // Add last names to the list
-        // var maxNames = names.length;
-        // for (var i = 0; i < maxNames; i++) {
-        //     var lastName = getLastName(names[i]);
-        //     names[i].push(lastName);
-        // }
 
         professorName = names[professorIndex];
 
@@ -169,7 +160,7 @@ function grabProfessorNames(professorIndex, cellsArray) {
 
 }
 
-// This method interacts with background.js to retrieve the search page needed to find the rating for a professor
+/* This method interacts with background.js to retrieve the search page needed to find the rating for a professor */
 function grabProfessorSearchPage(professorIndex, currentProfessorNames, schoolName) {
 
     var message = {
@@ -185,34 +176,36 @@ function grabProfessorSearchPage(professorIndex, currentProfessorNames, schoolNa
 
     chrome.runtime.sendMessage(message, grabProfessorSearchPageCallback);
 
-
 }
 
-// This function processes the response gotten from background.js
+/* This function processes the response gotten from background.js */
 function grabProfessorSearchPageCallback(response) {
 
     var responseText = response.response;
 
-    if (foundResult(responseText)) {
-        console.log(foundResult(responseText));
+    // If the professor's name search on RMP brings up any results, go on to his/her page
+    if (checkProfessorExists(responseText)) {
         var htmlDoc = getDOMFromString(responseText);
-        var numOfResults = htmlDoc.getElementsByClassName("result-count")[0].innerHTML.match(/[0-9]+(?!.*[0-9])/);
         var professorClass = htmlDoc.getElementsByClassName("listing PROFESSOR")[0].getElementsByTagName("a")[0];
         rmpSearchURL = "http://www.ratemyprofessors.com" + professorClass.getAttribute("href");
+
+        // Open up the professor's RMP page to get the rating
         grabProfessorRating(response.professorIndex, rmpSearchURL);
 
-    } else if(numTries < response.professorNames.length) {
+    } else {
+        // Do nothing if not found
         return;
     }
 
 
 }
 
-// Only if we have found a result for the professor do we do anything
-function foundResult(text) {
+/* Only if we have found a result for the professor on RMP do we do anything */
+function checkProfessorExists(text) {
     return (text.indexOf("Your search didn't return any results.") == -1);
 }
 
+/* Interacts with background.js to open the professor's personal RMP page */
 function grabProfessorRating(professorIndex, SearchPageURL) {
 
     var message = {
@@ -225,23 +218,28 @@ function grabProfessorRating(professorIndex, SearchPageURL) {
 
     };
 
-
     chrome.runtime.sendMessage(message, grabProfessorRatingCallback);
-
-
 }
 
+/* Processes response gotten from background.js */
 function grabProfessorRatingCallback(response) {
 
     var responseText = response.response;
+
+    // Grab the professor's RMP page HTML
     var htmlDoc = getDOMFromString(responseText);
 
+    // Grab professor's overall rating, difficulty rating, recent review, and more
     grabProfessorInfo(htmlDoc, response);
     
 }
 
+/* Grabs professor's info from the HTML of the professor's personal RMP page */
 function grabProfessorInfo(htmlDoc, response) {
+
     var gradeElements = htmlDoc.getElementsByClassName("grade");
+
+    // Grab all the professor's tags
     var tags = htmlDoc.getElementsByClassName("tag-box-choosetags");
 
 
@@ -263,6 +261,7 @@ function grabProfessorInfo(htmlDoc, response) {
         title = htmlDoc.getElementsByClassName("result-title")[0].innerHTML;
         title = title.substring(0, title.indexOf("<br>"));
 
+        // Grab top three tags
         firstTag = tags[0].innerHTML.toLowerCase();
         secondTag = tags[1].innerHTML.toLowerCase();
         thirdTag = tags[2].innerHTML.toLowerCase();
@@ -270,14 +269,10 @@ function grabProfessorInfo(htmlDoc, response) {
             thirdTag.substring(0, thirdTag.indexOf("<b>")).trim()];
     }
 
+    // Grab the professor cell needed to inject the rating back in
     professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex];
 
-    while(!professorRetrieval.hasChildNodes()) {
-        professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex++];
-    }
-
-    addRatingToPage(professorRetrieval, professorRating, wouldTakeAgain, difficultyRating, recentReview, 
-        className, response.searchPageURL, numRatings, fullName, title, topThreeTags);
+    addDataToPage(professorRetrieval, response.searchPageURL);
 }
 
 function getDOMFromString(textHTML) {
@@ -288,36 +283,30 @@ function getDOMFromString(textHTML) {
     return tempDiv;
 }
 
-function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, DifficultyRating, RecentReview, 
-    ClassName, SearchPageURL, NumRatings, FullName, Title, TopTags) {
-    var span = document.createElement("span"); // Created to separate professor name and score in the HTML
-    var link = document.createElement("a");
-    var professorRatingTextNode = document.createTextNode(ProfessorRating); // The text with the professor rating
-    var circle = document.createElement("span");
+/* Injects the data into the page and adds tooltip on hover */
+function addDataToPage(professorRetrieval, searchPageURL) {
+    // Separates the professor name and rating
+    var span = document.createElement("span"); 
 
-    span.setAttribute("title", "<h3 class = 'more-info'>" + FullName + " (" + NumRatings + " Ratings)</h3><br /><p class = 'title'>" + Title +
+    // Needed to add RMP link to rating 
+    var link = document.createElement("a"); 
+
+    // Contains the professor rating itself
+    var professorRatingTextNode = document.createTextNode(professorRating); 
+
+    // Set tooltip text
+    span.setAttribute("title", "<h3 class = 'more-info'>" + fullName + " (" + numRatings + " Ratings)</h3><br /><p class = 'title'>" + title +
         "</p><hr>Would Take Again: <strong class = 'percentage'>" + wouldTakeAgain  +
         "</strong>, Difficulty Rating: <strong class = 'difficulty'>" + difficultyRating + 
-        "</strong><hr><span class><strong>Tags:</strong></span> <span class = 'black'>" + TopTags[0] + "</span>  <span class = 'black'>" + TopTags[1] 
-        + "</span> <span class = 'black'>" + TopTags[2] + "</span><hr><strong>Most Recent Review:</strong><br /><blockquote>" 
-        + recentReview + "<cite>" +"Student who took " + ClassName + "</cite></blockquote>");
+        "</strong><hr><span class><strong>Tags:</strong></span> <span class = 'black'>" + topThreeTags[0] + "</span>  <span class = 'black'>" 
+        + topThreeTags[1] + "</span> <span class = 'black'>" + topThreeTags[2] + "</span><hr><strong>Most Recent Review:</strong><br /><blockquote>" 
+        + recentReview + "<cite>" +"Student who took " + className + "</cite></blockquote>");
 
+    // Color-code the rating based on score
+    colorCodeRating(span);
 
-     if (ProfessorRating >= 1.0 && ProfessorRating < 2) {
-        span.style["background-color"] = "#B22222"; // red = bad
-        span.style.border = "0px solid";
-    } else if (ProfessorRating >= 2.0 && ProfessorRating < 3) {
-        span.style["background-color"] = "#B22222"; // red = bad
-        span.style.border = "0px solid";
-    } else if (ProfessorRating >= 3.0 && ProfessorRating < 4) {
-        span.style["background-color"] = "#FF8C00"; // yellow/orange = okay
-        span.style.border = "0px solid";
-    } else if (ProfessorRating >= 4 && ProfessorRating <= 5) {
-        span.style["background-color"] = "#006400"; // green = good
-        span.style.border = "0px solid";
-    }
-
-
+    
+    // Create the tooltip itself using jQuery UI
     $(span).tooltip({
         content: function() {
             return $(this).attr('title');
@@ -327,7 +316,7 @@ function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, Di
         }
     });
 
-    // style the rating before adding
+    // Style the rating before adding
     span.style["border-radius"] = "2px";
     link.style.color = "white";
     span.style["margin-top"] = "2px";
@@ -337,14 +326,31 @@ function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, Di
     span.style.clear = "left";
     link.style["text-decoration"] = "none";
 
+    // Create the link to RMP page
+    link.setAttribute("href", searchPageURL); 
 
-    link.setAttribute("href", SearchPageURL); // make the link
-    link.target = "_blank"; // open a new tab when clicked
+    // Open a new tab when link is clicked
+    link.target = "_blank"; 
 
-
-    // append everything together
+    // Attach everything
     link.appendChild(professorRatingTextNode);
     span.appendChild(link);
     professorRetrieval.appendChild(span);
 
+}
+
+function colorCodeRating(span) {
+    if (professorRating >= 1.0 && professorRating < 2) {
+        span.style["background-color"] = "#B22222"; // red = bad
+        span.style.border = "0px solid";
+    } else if (professorRating >= 2.0 && professorRating < 3) {
+        span.style["background-color"] = "#B22222"; // red = bad
+        span.style.border = "0px solid";
+    } else if (professorRating >= 3.0 && professorRating < 4) {
+        span.style["background-color"] = "#FF8C00"; // yellow/orange = okay
+        span.style.border = "0px solid";
+    } else if (professorRating >= 4 && professorRating <= 5) {
+        span.style["background-color"] = "#006400"; // green = good
+        span.style.border = "0px solid";
+    }
 }

@@ -1,9 +1,27 @@
+/* Styles the tooltip  on hover */
 .tooltip {
   opacity: 1 !important;
   filter:alpha(opacity=100) !important;   
   max-width: 255px !important;  
 }
 
+/* Styles the heading of the tooltip */
+.more-info {
+    font-size: 14px;
+    line-height: 0.05em;
+    padding-bottom: 0px;
+    margin-bottom: 0px;
+}
+
+/* Styles text in tooltip */
+.title {
+    padding-top: 0px;
+    margin-top: 0px;
+    padding-bottom: 0px;
+    margin-bottom: 0px;
+}
+
+/* Styles the top three tags for a professor */
 .black {
     background-color: #000000;
     color: white;
@@ -15,20 +33,7 @@
     white-space: nowrap;
 }
 
-.more-info {
-	font-size: 14px;
-	line-height: 0.05em;
-	padding-bottom: 0px;
-	margin-bottom: 0px;
-}
-
-.title {
-	padding-top: 0px;
-	margin-top: 0px;
-    padding-bottom: 0px;
-    margin-bottom: 0px;
-}
-
+/* Styles the blockquote for most recent review in tooltip */
 blockquote {
     font-style: italic;
     width: 83%;

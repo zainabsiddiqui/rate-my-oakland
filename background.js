@@ -6,6 +6,7 @@
 *
 **/
 
+/* Run main.js only if RateMyOakland toolbar icon is clicked */
 chrome.browserAction.onClicked.addListener(function(tab) {
    chrome.tabs.executeScript(null, {file: "main.js"});
 });
