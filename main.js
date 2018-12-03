@@ -10,6 +10,7 @@ var professorName = ""; // This is the name of the professor currently being sea
 var rmpSearchURL = ""; // This is the URL being used to search for a certain professor
 var professorRating = ""; // This is the numeric rating for a certain professor
 
+
 var numTries;
 
 var wouldTakeAgain = ""; // This is the percentage of people who would take the professor again
@@ -29,8 +30,8 @@ listener();
 function listener() {
         resetValues();
         if(detectClassSearchPage()) {
-        	runScript();
-    	}
+            runScript();
+        }
 }
 
 // This function resets our global variables
@@ -54,11 +55,11 @@ function resetValues() {
 // This returns true if the user is on the OU class search page
 function detectClassSearchPage() {
     try {
-    	// This finds the HTML tag that houses instructor listings on the class search page
+        // This finds the HTML tag that houses instructor listings on the class search page
         var classSearchMethod = document.querySelector(".instructor-col");
 
         if (classSearchMethod != undefined) {
-        	console.log("OMG YAY!");
+            console.log("OMG YAY!");
             return true; // Class search page has been detected
         }
     } catch (classSearchErr) {
@@ -73,27 +74,49 @@ function runScript() {
 
     var schoolName = encodeURI("oakland university");
 
-    professorIndex = 0;
+    var professorIndex = 0;
 
-    var namesExtracted = document.querySelectorAll(".email");
+    var namesCells = document.querySelectorAll("*[data-content='Instructor']");
+    var cellsArray = Array.prototype.slice.call(namesCells);
+    var removed = [];
+
+    console.log("Got here!");
 
 
-     while (professorName !== undefined) {
+    for(var i = 0; i < cellsArray.length; i++) {
+        if(cellsArray[i].children.length > 2 | !cellsArray[i].hasChildNodes()) {
+            cellsArray[i] = null;
+            removed.push(i);
+        } 
+    }
 
-        var currentProfessorNames = grabProfessorNames(professorIndex, namesExtracted);
+    var currentProfessorNames;
+
+
+     while (professorIndex < cellsArray.length) {
+
+        if(removed.length > 0) {
+            if(removed.includes(professorIndex)) {
+                professorIndex++;
+                continue;
+            } 
+        }
+
+
+        currentProfessorNames = grabProfessorNames(professorIndex, cellsArray);
 
 
         if(currentProfessorNames == undefined) {
-        	break;
+            console.log("Oh no!");
+            break;
         }
-
 
 
         if (isValidName(currentProfessorNames)) {
             numTries = 0;
             grabProfessorSearchPage(professorIndex, currentProfessorNames, schoolName);
             if(currentProfessorNames == undefined) {
-            	break;
+                break;
             }
 
         }
@@ -114,16 +137,19 @@ function isValidName(name) {
 }
 
 // This function grabs professor names from the class search webpage HTML
-function grabProfessorNames(professorIndex, namesExtracted) {
+function grabProfessorNames(professorIndex, cellsArray) {
     try {
-
-        // var namesCells = document.querySelectorAll("*[data-property='instructor']");
-
 
         var names = [];
 
-        for(var i = 0; i < namesExtracted.length; i++) {
-        	names[i] = namesExtracted[i].innerText.replace(/ *\([^)]*\) */g, " ");
+        // cellsArray = cellsArray.filter(function(e){return e}); 
+
+        // console.log(cellsArray);
+
+        for(var j = 0; j < cellsArray.length; j++) {
+            if(cellsArray[j] !== null) {
+                names[j] = cellsArray[j].firstChild.innerText.replace(/ *\([^)]*\) */g, " ");
+            }
         }
 
         // Add last names to the list
@@ -242,7 +268,6 @@ function grabProfessorInfo(htmlDoc, response) {
         thirdTag = tags[2].innerHTML.toLowerCase();
         topThreeTags = [firstTag.substring(0, firstTag.indexOf("<b>")).trim(), secondTag.substring(0, secondTag.indexOf("<b>")).trim(), 
             thirdTag.substring(0, thirdTag.indexOf("<b>")).trim()];
-        console.log(topThreeTags[0]);
     }
 
     professorRetrieval = document.querySelectorAll("*[data-content='Instructor']")[response.professorIndex];
@@ -318,9 +343,8 @@ function addRatingToPage(professorRetrieval, ProfessorRating, WouldTakeAgain, Di
 
 
     // append everything together
-  	link.appendChild(professorRatingTextNode);
-	span.appendChild(link);
-	professorRetrieval.appendChild(span);
+    link.appendChild(professorRatingTextNode);
+    span.appendChild(link);
+    professorRetrieval.appendChild(span);
 
 }
-
