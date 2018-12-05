@@ -1,8 +1,9 @@
 {
   "manifest_version": 2,
-
+  "short_name": "RateMyOU",
   "name": "RateMyOakland",
-  "version": "1.0",
+  "description": "Make OU class registration a breeze.",
+  "version": "1.5",
   "content_scripts": [
     {
       "matches": ["https://*.oakland.edu/*"],
